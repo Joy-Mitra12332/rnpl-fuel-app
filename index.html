@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RNPL Fuel Inventory</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RNPL Fuel"><meta name="theme-color" content="#14323a">
+<style>
+:root{--bg:#e8ebe7;--card:#fff;--ink:#1b2326;--mut:#67757a;--line:#d5dbd6;--pri:#14323a;--g:#2f7f5f;--o:#d4631f}
+@media(prefers-color-scheme:dark){:root{--bg:#10171a;--card:#192226;--ink:#e6ecea;--mut:#8fa0a5;--line:#2a373c;--pri:#0b1214}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums;padding:env(safe-area-inset-top) 0 calc(64px + env(safe-area-inset-bottom))}
+header{background:var(--pri);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}
+header h1{font-size:17px;margin:0;flex:1}header small{opacity:.7;display:block;font-weight:400;font-size:12px}
+header button{background:#ffffff22;color:#fff;border:0;border-radius:8px;padding:8px 11px;font-size:13px}
+main{padding:12px;max-width:760px;margin:auto}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.k{background:var(--card);border-radius:10px;padding:12px;border-left:4px solid var(--line)}
+.k.tap{border-left-color:var(--pri);cursor:pointer}.k.sel{outline:2px solid var(--pri)}
+.k .l{color:var(--mut);font-size:12.5px}.k .v{font-size:25px;font-weight:700;margin-top:2px}.k .s{color:var(--mut);font-size:12px}
+.k.hi{grid-column:span 2;border-left-color:var(--g)}.k.hi .v{font-size:32px}
+.card,.item{background:var(--card);border-radius:10px;padding:12px;margin:10px 0}
+h3{margin:16px 2px 6px;font-size:15px}.sub{color:var(--mut);margin-left:8px;font-size:13px}
+.row{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid var(--line);font-size:14px}
+.row span:first-child{color:var(--mut)}.row span:last-child,.row b{text-align:right}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden}
+th,td{padding:7px 10px;text-align:right;border-top:1px solid var(--line);font-size:14px}th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:500;font-size:12.5px;border:0}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;color:var(--mut);padding:13px 2px;font-size:13px}nav button.on{color:var(--ink);font-weight:700;box-shadow:inset 0 3px 0 var(--pri)}
+.login{max-width:360px;margin:12vh auto;padding:20px}.login h1{margin:0 0 4px}.login p{color:var(--mut)}
+.login input{width:100%;padding:13px;margin:6px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:16px}
+.login button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--pri);color:#fff;font-size:16px;margin-top:6px}
+.login button:disabled{opacity:.5}.login a{display:block;margin-top:12px;color:var(--mut);text-decoration:underline}.msg{margin-top:10px;color:var(--o)}
+.err{color:var(--o);font-size:13px;padding:4px 2px}.leg{font-size:12.5px;color:var(--mut)}.leg i{display:inline-block;width:10px;height:10px;margin:0 4px 0 10px;border-radius:2px}
+</style></head><body><div id="root"></div>
+<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script>
+const API='https://script.google.com/macros/s/AKfycbzstqaD8ERRTSTVr8DtJ3zT5RikyAYl4wNAxPvx1mMv27fZ8cGbmH_EJvNN4jlmMlA/exec';
+const {useState,useEffect,useCallback}=React;const html=htm.bind(React.createElement);
+const f=(n,d=0)=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:d});
+const call=p=>fetch(API+'?'+new URLSearchParams(p)).then(r=>r.json());
+const K=({l,v,s,onClick,cls,on})=>html`<div class=${'k '+(onClick?'tap ':'')+(cls||'')+(on?' sel':'')} onClick=${onClick}><div class="l">${l}</div><div class="v">${v}</div>${s&&html`<div class="s">${s}</div>`}</div>`;
+
+function Login({onOk}){
+ const [email,setE]=useState(''),[code,setC]=useState(''),[step,setS]=useState(0),[msg,setM]=useState(''),[busy,setB]=useState(false);
+ const go=async()=>{setB(true);setM('');try{
+  if(step===0){const r=await call({action:'request',email});setM(r.msg||'');if(r.ok)setS(1)}
+  else{const r=await call({action:'verify',email,code});if(r.ok){localStorage.setItem('rnpl_t',r.token);onOk(r.token)}else setM(r.msg||'Sign-in failed')}
+ }catch(e){setM('No connection. Check your internet and try again.')}setB(false)};
+ return html`<div class="login"><h1>RNPL Fuel Inventory</h1><p>${step===0?'Enter your authorised email to get a sign-in code.':'Enter the 6-digit code sent to your email.'}</p>
+ <input type="email" autocomplete="email" placeholder="name@company.com" value=${email} disabled=${step===1} onInput=${e=>setE(e.target.value)}/>
+ ${step===1&&html`<input inputmode="numeric" maxlength="6" placeholder="6-digit code" value=${code} onInput=${e=>setC(e.target.value)}/>`}
+ <button disabled=${busy||!email||(step===1&&code.length<6)} onClick=${go}>${busy?'Please wait…':step===0?'Send code':'Sign in'}</button>
+ ${step===1&&html`<a onClick=${()=>{setS(0);setC('');setM('')}}>Use a different email</a>`}<div class="msg">${msg}</div></div>`}
+
+function Overview({d}){const i=d.inv;return html`<div class="grid">
+ <${K} cls="hi" l="Closing stock (MT)" v=${f(i.close)} s=${'Usable: '+f(i.usable)+' MT'}/>
+ <${K} l="Opening stock, this month (MT)" v=${f(i.open)}/>
+ <${K} l="Received, this month (MT)" v=${f(i.recvM)} s=${'All time: '+f(i.allR)}/>
+ <${K} l="Consumed, this month (MT)" v=${f(i.consM)} s=${'All time: '+f(i.allC)}/>
+ <${K} l="Unloaded from jetty today (MT)" v=${f(i.jetty,1)}/>
+ <${K} l="MTD plant load factor" v=${i.plf||'—'}/>
+ <${K} l="Days of stock at 85% PLF" v=${i.days85||'—'} s="Both units"/>
+ <${K} l="Days of stock at current rate" v=${i.daysNow||'—'}/></div>`}
+
+function Daily({d}){const a=d.daily.slice(-30),mx=Math.max(1,...a.map(x=>Math.max(x.r,x.c))),w=300/a.length;
+ return html`<div class="card"><svg viewBox="0 0 300 126" width="100%">${a.map((x,i)=>html`<g><rect x=${i*w+.5} y=${120-x.r/mx*110} width=${w/2-.5} height=${x.r/mx*110} fill="var(--g)"/><rect x=${i*w+w/2} y=${120-x.c/mx*110} width=${w/2-.5} height=${x.c/mx*110} fill="var(--o)"/></g>`)}<line x1="0" x2="300" y1="120" y2="120" stroke="var(--line)"/></svg>
+ <div class="leg"><i style="background:var(--g)"></i>Received<i style="background:var(--o)"></i>Consumed · last 30 days (MT)</div></div>
+ <table><tr><th>Date</th><th>Received</th><th>Consumed</th><th>Balance</th></tr>${[...d.daily].reverse().map(x=>html`<tr><td>${x.d.slice(5)}</td><td>${f(x.r)}</td><td>${f(x.c)}</td><td>${f(x.b)}</td></tr>`)}</table>`}
+
+const Item=({o})=>{const t=Object.keys(o).find(k=>/^Mother Vessel/.test(k));
+ return html`<div class="item"><b>${o[t]||'—'}</b><span class="sub">${o['Shipment No.']}</span>${Object.entries(o).filter(([k,v])=>k&&v&&k!=='Source row'&&k!==t&&k!=='Shipment No.').map(([k,v])=>html`<div class="row"><span>${k}</span><span>${v}</span></div>`)}</div>`};
+
+function Vessels({d}){const v=d.ves,[sel,setSel]=useState('d');
+ const L={d:['Discharging now',v.d],t:['Towards Bangladesh',v.t],u:['Upcoming laycans',v.u]};
+ return html`<div class="grid">
+ <${K} l="Discharging (MV)" v=${v.d.length} s=${f(v.qd)+' MT'} on=${sel==='d'} onClick=${()=>setSel('d')}/>
+ <${K} l="Towards Bangladesh (MV)" v=${v.t.length} s=${f(v.qt)+' MT'} on=${sel==='t'} onClick=${()=>setSel('t')}/>
+ <${K} l="Upcoming laycans (MV)" v=${v.u.length} s=${f(v.qu)+' MT'} on=${sel==='u'} onClick=${()=>setSel('u')}/>
+ <${K} l="Next laycan starts" v=${v.next||'—'}/></div>
+ <h3>${L[sel][0]}</h3>${L[sel][1].map(o=>html`<${Item} o=${o}/>`)}`}
+
+function Lighters({l}){const cols=[['All running shipments',null],...l.ships.map((s,i)=>[s,i])];
+ return html`${cols.map(([s,i])=>html`<div class="card"><b>${s}</b>${l.rows.map(r=>html`<div class="row"><span>${r.label}</span><b>${i===null?r.total:r.per[i]}</b></div>`)}</div>`)}`}
+
+function App(){
+ const [t,setT]=useState(localStorage.getItem('rnpl_t')),[d,setD]=useState(()=>{try{return JSON.parse(localStorage.getItem('rnpl_d'))}catch(e){return null}}),[tab,setTab]=useState(0),[err,setErr]=useState(''),[busy,setB]=useState(false);
+ const load=useCallback(async()=>{if(!t)return;setB(true);try{const r=await call({action:'data',token:t});
+  if(r.auth===false){localStorage.removeItem('rnpl_t');setT(null)}else if(r.ok){setD(r.data);setErr('');localStorage.setItem('rnpl_d',JSON.stringify(r.data))}else setErr(r.error||'Could not load data')}
+  catch(e){setErr('Offline. Showing the last saved data.')}setB(false)},[t]);
+ useEffect(()=>{load();const i=setInterval(load,300000),v=()=>document.visibilityState==='visible'&&load();document.addEventListener('visibilitychange',v);return()=>{clearInterval(i);document.removeEventListener('visibilitychange',v)}},[load]);
+ if(!t)return html`<${Login} onOk=${setT}/>`;
+ if(!d)return html`<div class="login"><p>${err||'Loading…'}</p></div>`;
+ const T=['Overview','Daily','Vessels','Lighters'];
+ return html`<header><h1>RNPL Fuel Inventory<small>Data as of ${d.asOf}</small></h1><button onClick=${load}>${busy?'…':'Refresh'}</button><button onClick=${()=>{localStorage.clear();setT(null);setD(null)}}>Sign out</button></header>
+ <main>${err&&html`<div class="err">${err}</div>`}${tab===0?html`<${Overview} d=${d}/>`:tab===1?html`<${Daily} d=${d}/>`:tab===2?html`<${Vessels} d=${d}/>`:html`<${Lighters} l=${d.lighters}/>`}</main>
+ <nav>${T.map((n,i)=>html`<button class=${tab===i?'on':''} onClick=${()=>setTab(i)}>${n}</button>`)}</nav>`}
+ReactDOM.createRoot(document.getElementById('root')).render(html`<${App}/>`);
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+</script></body></html>
