@@ -34,7 +34,7 @@ th,td{padding:8px 10px;text-align:right;font-size:14px}th:first-child,td:first-c
 th:nth-child(2){background:var(--g)}th:nth-child(3){background:var(--o)}td:nth-child(2){color:var(--g);font-weight:600}td:nth-child(3){color:var(--o);font-weight:600}
 tr:nth-child(even) td{background:color-mix(in srgb,var(--t) 7%,var(--card))}
 nav{position:fixed;left:50%;transform:translateX(-50%);width:calc(100% - 20px);max-width:740px;bottom:calc(8px + env(safe-area-inset-bottom));display:flex;gap:4px;background:var(--card);border-radius:20px;padding:5px;overflow-x:auto;box-shadow:0 6px 22px #0f2a3140}
-nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;border:0;background:none;color:var(--mut);padding:7px 2px;font-size:10.5px;min-width:56px;border-radius:15px}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;border:0;background:none;color:var(--mut);padding:7px 7px;font-size:10px;min-width:56px;white-space:nowrap;border-radius:15px}nav button:nth-child(5){margin-left:6px;box-shadow:-3px 0 0 -1px var(--line)}
 nav button .ni{font-size:19px}nav button.on{background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c);font-weight:700}
 .login{max-width:360px;margin:12vh auto;padding:20px}.login h1{margin:0 0 4px}.login p{color:var(--mut)}
 .login input{width:100%;padding:13px;margin:6px 0;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font-size:16px}
@@ -43,6 +43,7 @@ nav button .ni{font-size:19px}nav button.on{background:color-mix(in srgb,var(--c
 .err{color:var(--r);font-size:13px;padding:4px 2px}.leg{font-size:12.5px;color:var(--mut)}.leg i{display:inline-block;width:10px;height:10px;margin:0 4px 0 10px;border-radius:2px}.gg{background:var(--g)}.oo{background:var(--o)}
 .plain th,.plain th:nth-child(2),.plain th:nth-child(3){background:#1b5560}.plain td:nth-child(2),.plain td:nth-child(3){color:inherit;font-weight:400}
 .top0{margin-top:2px}
+.chip{display:inline-block;background:#1b5560;color:#fff;border-radius:20px;padding:3px 11px;font-size:12px;font-weight:600;margin:0 0 8px}
 </style></head><body><div id="root"></div>
 <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -96,7 +97,7 @@ function Fuel({x,u,d2,ic,title}){
 function Activity({a}){if(!a)return html`<div class="err">Admin only.</div>`;
  return html`<div class="grid"><${K} cls="c-g" ic="👥" l="Viewed today" v=${a.today} s=${'of '+a.users.length+' users'}/><${K} cls="c-b" ic="🔑" l="Authorised users" v=${a.users.length}/></div>
  <h3>Users</h3><table class="plain"><tr><th>User</th><th>Last seen</th><th>Today</th><th>Total</th></tr>${a.users.map(u=>html`<tr><td>${u.name||u.email}</td><td>${u.last||'never'}</td><td>${u.today}</td><td>${u.total}</td></tr>`)}</table>
- <h3>Recent activity</h3>${a.log.map(r=>html`<div class="row"><span>${String(r[0]).slice(5,16)} · ${r[2]}${r[3]?' · '+r[3]:''}</span><b>${String(r[1]).split('@')[0]}</b></div>`)}`}
+ <h3>Recent activity</h3>${a.log.map(r=>html`<div class="row"><span>${String(r[0]).slice(0,16)}</span><b>${r[1]}</b></div>`)}`}
 
 const Item=({o,c})=>{const t=Object.keys(o).find(k=>/^Mother Vessel/.test(k));
  return html`<div class=${'item '+c}><b>${o[t]||'—'}</b><span class="sub">${o['Shipment No.']}</span>${Object.entries(o).filter(([k,v])=>k&&v&&k!=='Source row'&&k!==t&&k!=='Shipment No.').map(([k,v])=>html`<div class="row"><span>${k}</span><span>${v}</span></div>`)}</div>`};
@@ -115,19 +116,17 @@ function Lighters({l}){const cols=[['All running shipments',null],...l.ships.map
  return html`${cols.map(([s,i])=>html`<div class=${'card sh '+(i===null?'c-t':CL[i%4])}><b>${s}</b>${l.rows.map((r,j)=>html`<div class="row"><span><i class=${'dot d'+j}></i>${r.label}</span><b>${i===null?r.total:r.per[i]}</b></div>`)}</div>`)}`}
 
 class EB extends React.Component{constructor(p){super(p);this.state={e:null}}static getDerivedStateFromError(e){return{e}}componentDidUpdate(p){if(p.k!==this.props.k&&this.state.e)this.setState({e:null})}render(){return this.state.e?html`<div class="err">Could not show this screen: ${String(this.state.e)}</div>`:this.props.children}}
-const TN=['Overview','Daily','Vessels','Lighters','HSD','Limestone','Activity'];
 function App(){
  const [t,setT]=useState(localStorage.getItem('rnpl_t')),[d,setD]=useState(()=>{try{return JSON.parse(localStorage.getItem('rnpl_d'))}catch(e){return null}}),[tab,setTab]=useState(0),[err,setErr]=useState(''),[busy,setB]=useState(false);
  const load=useCallback(async()=>{if(!t)return;setB(true);try{const r=await call({action:'data',token:t});
   if(r.auth===false){localStorage.removeItem('rnpl_t');setT(null)}else if(r.ok){setD(r.data);setErr('');localStorage.setItem('rnpl_d',JSON.stringify(r.data))}else setErr(r.error||'Could not load data')}
   catch(e){setErr('Offline. Showing the last saved data.')}setB(false)},[t]);
  useEffect(()=>{load();const i=setInterval(load,300000),v=()=>document.visibilityState==='visible'&&load();document.addEventListener('visibilitychange',v);return()=>{clearInterval(i);document.removeEventListener('visibilitychange',v)}},[load]);
- useEffect(()=>{if(t&&tab>0)call({action:'ping',token:t,tab:TN[tab]}).catch(()=>{})},[tab,t]);
  if(!t)return html`<${Login} onOk=${setT}/>`;
  if(!d)return html`<div class="login"><p>${err||'Loading…'}</p></div>`;
- const T=[['Overview','📊','c-b'],['Daily','📅','c-g'],['Vessels','🚢','c-a'],['Lighters','🛶','c-p'],['HSD','⛽','c-o'],['Limestone','🪨','c-t'],...(d.admin?[['Activity','👁️','c-r']]:[])];
+ const T=[['Coal Overview','📊','c-b'],['Coal Daily','📅','c-g'],['Coal Vessels','🚢','c-a'],['Coal Lighters','🛶','c-p'],['HSD','⛽','c-o'],['Limestone','🪨','c-t'],...(d.admin?[['Activity','👁️','c-r']]:[])];
  return html`<header><h1>RNPL Fuel Inventory<small>Data as of ${d.asOf}</small></h1><button onClick=${load}>${busy?'…':'Refresh'}</button><button onClick=${()=>{localStorage.clear();setT(null);setD(null)}}>Sign out</button></header>
- <main>${err&&html`<div class="err">${err}</div>`}<${EB} k=${tab}>${tab===0?html`<${Overview} d=${d}/>`:tab===1?html`<${Daily} d=${d}/>`:tab===2?html`<${Vessels} d=${d}/>`:tab===3?html`<${Lighters} l=${d.lighters}/>`:tab===4?html`<${Fuel} x=${d.hsd} u="Liter" d2=${0} ic="⛽" title="HSD Stock Overview"/>`:tab===5?html`<${Fuel} x=${d.lime} u="MT" d2=${1} ic="🪨" title="Limestone Stock Overview"/>`:html`<${Activity} a=${d.activity}/>`}<//></main>
+ <main>${err&&html`<div class="err">${err}</div>`}${tab<4&&html`<div class="chip">⚫ COAL</div>`}<${EB} k=${tab}>${tab===0?html`<${Overview} d=${d}/>`:tab===1?html`<${Daily} d=${d}/>`:tab===2?html`<${Vessels} d=${d}/>`:tab===3?html`<${Lighters} l=${d.lighters}/>`:tab===4?html`<${Fuel} x=${d.hsd} u="Liter" d2=${0} ic="⛽" title="HSD Stock Overview"/>`:tab===5?html`<${Fuel} x=${d.lime} u="MT" d2=${1} ic="🪨" title="Limestone Stock Overview"/>`:html`<${Activity} a=${d.activity}/>`}<//></main>
  <nav>${T.map(([n,ic,c],i)=>html`<button class=${c+(tab===i?' on':'')} onClick=${()=>setTab(i)}><span class="ni">${ic}</span>${n}</button>`)}</nav>`}
 ReactDOM.createRoot(document.getElementById('root')).render(html`<${App}/>`);
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
