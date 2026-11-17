@@ -34,7 +34,7 @@ th,td{padding:8px 10px;text-align:right;font-size:14px}th:first-child,td:first-c
 th:nth-child(2){background:var(--g)}th:nth-child(3){background:var(--o)}td:nth-child(2){color:var(--g);font-weight:600}td:nth-child(3){color:var(--o);font-weight:600}
 tr:nth-child(even) td{background:color-mix(in srgb,var(--t) 7%,var(--card))}
 nav{position:fixed;left:50%;transform:translateX(-50%);width:calc(100% - 20px);max-width:740px;bottom:calc(8px + env(safe-area-inset-bottom));display:flex;gap:4px;background:var(--card);border-radius:20px;padding:5px;overflow-x:auto;box-shadow:0 6px 22px #0f2a3140}
-nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;border:0;background:none;color:var(--mut);padding:7px 7px;font-size:10px;min-width:56px;white-space:nowrap;border-radius:15px}nav button:nth-child(5){margin-left:6px;box-shadow:-3px 0 0 -1px var(--line)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;border:0;background:none;color:var(--mut);padding:7px 7px;font-size:10px;min-width:56px;white-space:nowrap;border-radius:15px}nav button:nth-child(6){margin-left:6px;box-shadow:-3px 0 0 -1px var(--line)}
 nav button .ni{font-size:19px}nav button.on{background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c);font-weight:700}
 .login{max-width:360px;margin:12vh auto;padding:20px}.login h1{margin:0 0 4px}.login p{color:var(--mut)}
 .login input{width:100%;padding:13px;margin:6px 0;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font-size:16px}
@@ -44,6 +44,7 @@ nav button .ni{font-size:19px}nav button.on{background:color-mix(in srgb,var(--c
 .plain th,.plain th:nth-child(2),.plain th:nth-child(3){background:#1b5560}.plain td:nth-child(2),.plain td:nth-child(3){color:inherit;font-weight:400}
 .top0{margin-top:2px}
 .chip{display:inline-block;background:#1b5560;color:#fff;border-radius:20px;padding:3px 11px;font-size:12px;font-weight:600;margin:0 0 8px}
+.pos{color:var(--g)!important;font-weight:700!important}.neg{color:var(--r)!important;font-weight:700!important}tr.tod td{background:color-mix(in srgb,var(--a) 20%,var(--card))}
 </style></head><body><div id="root"></div>
 <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -73,6 +74,7 @@ function Overview({d}){const i=d.inv,dd=parseFloat(i.days85),dc=dd<5?'c-r':dd<10
  <${K} cls="c-g" ic="🚢" l="Received, this month (MT)" v=${f(i.recvM)} s=${'All time: '+f(i.allR)}/>
  <${K} cls="c-o" ic="🔥" l="Consumed, this month (MT)" v=${f(i.consM)} s=${'All time: '+f(i.allC)}/>
  <${K} cls="c-t" ic="🏗️" l="Unloaded from jetty today (MT)" v=${f(i.jetty,1)}/>
+ <${K} cls="c-b" ic="🌊" l="Floating stock, ships/barges (MT)" v=${f(i.floating)} s="In Bangladesh waters"/>
  <${K} cls="c-p" ic="⚡" l="MTD plant load factor" v=${i.plf||'—'} bar=${pl}/>
  <${K} cls=${dc} ic="⏳" l="Days of stock at 85% PLF" v=${i.days85||'—'} s="Both units"/>
  <${K} cls="c-a" ic="📉" l="Days of stock at current rate" v=${i.daysNow||'—'}/></div>`}
@@ -115,6 +117,25 @@ const CL=['c-b','c-o','c-a','c-p'];
 function Lighters({l}){const cols=[['All running shipments',null],...l.ships.map((s,i)=>[s,i])];
  return html`${cols.map(([s,i])=>html`<div class=${'card sh '+(i===null?'c-t':CL[i%4])}><b>${s}</b>${l.rows.map((r,j)=>html`<div class="row"><span><i class=${'dot d'+j}></i>${r.label}</span><b>${i===null?r.total:r.per[i]}</b></div>`)}</div>`)}`}
 
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fd=s=>s.slice(8)+' '+MON[+s.slice(5,7)-1],sg=n=>(n>0?'+':'')+f(n),dc=n=>n>0?'c-g':n<0?'c-r':'c-t',pn=n=>n>0?'pos':n<0?'neg':'';
+function Forecast({x}){
+ if(!x||x.error)return html`<div class="err">${(x&&x.error)||'No data yet. Update Code.gs and deploy a new version.'}</div>`;
+ const p=x.prev,pl=p?'As of '+fd(p.d):'No data for previous day',v=k=>p?f(p[k]):'—';
+ const T1=x.rows.map(r=>({...r,ok:r.d<x.today}));
+ return html`<h3 class="top0">Coal Forecast</h3><div class="grid">
+ <${K} cls="hi" ic="📦" l="Opening coal stock, excluding dead stock (T)" v=${f(x.open)} s=${x.asOf}/>
+ <${K} cls="c-o" ic="🔥" l="Forecast coal consumption (T/day)" v=${f(x.cons)} s="Per day"/>
+ <${K} cls="c-b" ic="🎯" l="Forecast jetty unloading (T)" v=${v('fu')} s=${pl}/>
+ <${K} cls="c-g" ic="🚚" l="Actual jetty unloading (T)" v=${v('au')} s=${pl}/>
+ <${K} cls=${p?dc(p.ud):'c-t'} ic="⚖️" l="Actual vs forecast unloading (T)" v=${p?sg(p.ud):'—'} s=${pl}/>
+ <${K} cls="c-p" ic="📋" l="Forecast closing stock (T)" v=${v('fc')} s=${pl}/>
+ <${K} cls="c-t" ic="🏁" l="Actual closing stock (T)" v=${v('ac')} s=${pl}/>
+ <${K} cls=${p?dc(p.sd):'c-t'} ic="📊" l="Stock deviation: actual vs forecast (T)" v=${p?sg(p.sd):'—'} s=${pl}/></div>
+ <h3>${'Jetty unloading (T) · '+fd(x.from)+' to '+fd(x.to)}</h3>
+ <table><tr><th>Date</th><th>Forecast</th><th>Actual</th><th>Deviation</th></tr>${T1.map(r=>html`<tr class=${r.d===x.today?'tod':''}><td>${fd(r.d)}</td><td>${f(r.fu)}</td><td>${r.ok?f(r.au):'—'}</td><td class=${r.ok?pn(r.ud):''}>${r.ok?sg(r.ud):'—'}</td></tr>`)}</table>
+ <h3>${'Closing stock (T) · '+fd(x.from)+' to '+fd(x.to)}</h3>
+ <table><tr><th>Date</th><th>Forecast</th><th>Actual</th><th>Deviation</th></tr>${T1.map(r=>html`<tr class=${r.d===x.today?'tod':''}><td>${fd(r.d)}</td><td>${f(r.fc)}</td><td>${r.ok?f(r.ac):'—'}</td><td class=${r.ok?pn(r.sd):''}>${r.ok?sg(r.sd):'—'}</td></tr>`)}</table>`}
 class EB extends React.Component{constructor(p){super(p);this.state={e:null}}static getDerivedStateFromError(e){return{e}}componentDidUpdate(p){if(p.k!==this.props.k&&this.state.e)this.setState({e:null})}render(){return this.state.e?html`<div class="err">Could not show this screen: ${String(this.state.e)}</div>`:this.props.children}}
 function App(){
  const [t,setT]=useState(localStorage.getItem('rnpl_t')),[d,setD]=useState(()=>{try{return JSON.parse(localStorage.getItem('rnpl_d'))}catch(e){return null}}),[tab,setTab]=useState(0),[err,setErr]=useState(''),[busy,setB]=useState(false);
@@ -124,9 +145,9 @@ function App(){
  useEffect(()=>{load();const i=setInterval(load,300000),v=()=>document.visibilityState==='visible'&&load();document.addEventListener('visibilitychange',v);return()=>{clearInterval(i);document.removeEventListener('visibilitychange',v)}},[load]);
  if(!t)return html`<${Login} onOk=${setT}/>`;
  if(!d)return html`<div class="login"><p>${err||'Loading…'}</p></div>`;
- const T=[['Coal Overview','📊','c-b'],['Coal Daily','📅','c-g'],['Coal Vessels','🚢','c-a'],['Coal Lighters','🛶','c-p'],['HSD','⛽','c-o'],['Limestone','🪨','c-t'],...(d.admin?[['Activity','👁️','c-r']]:[])];
+ const T=[['Coal Overview','📊','c-b'],['Coal Daily','📅','c-g'],['Coal Vessels','🚢','c-a'],['Coal Lighters','🛶','c-p'],['Coal Forecast','📈','c-t'],['HSD','⛽','c-o'],['Limestone','🪨','c-b'],...(d.admin?[['Activity','👁️','c-r']]:[])];
  return html`<header><h1>RNPL Fuel Inventory<small>Data as of ${d.asOf}</small></h1><button onClick=${load}>${busy?'…':'Refresh'}</button><button onClick=${()=>{localStorage.clear();setT(null);setD(null)}}>Sign out</button></header>
- <main>${err&&html`<div class="err">${err}</div>`}${tab<4&&html`<div class="chip">⚫ COAL</div>`}<${EB} k=${tab}>${tab===0?html`<${Overview} d=${d}/>`:tab===1?html`<${Daily} d=${d}/>`:tab===2?html`<${Vessels} d=${d}/>`:tab===3?html`<${Lighters} l=${d.lighters}/>`:tab===4?html`<${Fuel} x=${d.hsd} u="Liter" d2=${0} ic="⛽" title="HSD Stock Overview"/>`:tab===5?html`<${Fuel} x=${d.lime} u="MT" d2=${1} ic="🪨" title="Limestone Stock Overview"/>`:html`<${Activity} a=${d.activity}/>`}<//></main>
+ <main>${err&&html`<div class="err">${err}</div>`}${tab<5&&html`<div class="chip">⚫ COAL</div>`}<${EB} k=${tab}>${tab===0?html`<${Overview} d=${d}/>`:tab===1?html`<${Daily} d=${d}/>`:tab===2?html`<${Vessels} d=${d}/>`:tab===3?html`<${Lighters} l=${d.lighters}/>`:tab===4?html`<${Forecast} x=${d.forecast}/>`:tab===5?html`<${Fuel} x=${d.hsd} u="Liter" d2=${0} ic="⛽" title="HSD Stock Overview"/>`:tab===6?html`<${Fuel} x=${d.lime} u="MT" d2=${1} ic="🪨" title="Limestone Stock Overview"/>`:html`<${Activity} a=${d.activity}/>`}<//></main>
  <nav>${T.map(([n,ic,c],i)=>html`<button class=${c+(tab===i?' on':'')} onClick=${()=>setTab(i)}><span class="ni">${ic}</span>${n}</button>`)}</nav>`}
 ReactDOM.createRoot(document.getElementById('root')).render(html`<${App}/>`);
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
