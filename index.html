@@ -44,7 +44,7 @@ nav button .ni{font-size:19px}nav button.on{background:color-mix(in srgb,var(--c
 .plain th,.plain th:nth-child(2),.plain th:nth-child(3){background:#1b5560}.plain td:nth-child(2),.plain td:nth-child(3){color:inherit;font-weight:400}
 .top0{margin-top:2px}
 .chip{display:inline-block;background:#1b5560;color:#fff;border-radius:20px;padding:3px 11px;font-size:12px;font-weight:600;margin:0 0 8px}
-.pos{color:var(--g)!important;font-weight:700!important}.neg{color:var(--r)!important;font-weight:700!important}tr.tod td{background:color-mix(in srgb,var(--a) 20%,var(--card))}
+.k.wide{grid-column:span 2}.amb{color:var(--a)!important;font-weight:700!important}.pos{color:var(--g)!important;font-weight:700!important}.neg{color:var(--r)!important;font-weight:700!important}tr.tod td{background:color-mix(in srgb,var(--a) 20%,var(--card))}
 </style></head><body><div id="root"></div>
 <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -121,21 +121,25 @@ const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','De
 const fd=s=>s.slice(8)+' '+MON[+s.slice(5,7)-1],sg=n=>(n>0?'+':'')+f(n),dc=n=>n>0?'c-g':n<0?'c-r':'c-t',pn=n=>n>0?'pos':n<0?'neg':'';
 function Forecast({x}){
  if(!x||x.error)return html`<div class="err">${(x&&x.error)||'No data yet. Update Code.gs and deploy a new version.'}</div>`;
- const p=x.prev,pl=p?'As of '+fd(p.d):'No data for previous day',v=k=>p?f(p[k]):'—';
+ const p=x.prev,pl=p?'As of '+fd(p.d):'No data for previous day',v=k=>p&&p[k]!=null?f(p[k]):'—';
+ const cd=p&&p.fk!=null?p.ak-p.fk:null,cc=n=>n==null?'c-t':n>0?'c-o':n<0?'c-g':'c-t';
  const T1=x.rows.map(r=>({...r,ok:r.d<x.today}));
+ const TB=(title,fk,ak,dev,good)=>html`<h3>${title+' · '+fd(x.from)+' to '+fd(x.to)}</h3>
+ <table><tr><th>Date</th><th>Forecast</th><th>Actual</th><th>Deviation</th></tr>${T1.map(r=>{const d=r.ok&&r[fk]!=null?dev(r):null;return html`<tr class=${r.d===x.today?'tod':''}><td>${fd(r.d)}</td><td>${r[fk]==null?'—':f(r[fk])}</td><td>${r.ok?f(r[ak]):'—'}</td><td class=${d==null?'':good(d)}>${d==null?'—':sg(d)}</td></tr>`})}</table>`;
  return html`<h3 class="top0">Coal Forecast</h3><div class="grid">
  <${K} cls="hi" ic="📦" l="Opening coal stock, excluding dead stock (T)" v=${f(x.open)} s=${x.asOf}/>
- <${K} cls="c-o" ic="🔥" l="Forecast coal consumption (T/day)" v=${f(x.cons)} s="Per day"/>
- <${K} cls="c-b" ic="🎯" l="Forecast jetty unloading (T)" v=${v('fu')} s=${pl}/>
+ <${K} cls="c-o" ic="🔥" l="Forecast coal consumption (T/day)" v=${v('fk')} s=${pl}/>
+ <${K} cls="c-b" ic="⚙️" l="Actual coal consumption (T/day)" v=${p?f(p.ak):'—'} s=${pl}/>
+ <${K} cls=${cc(cd)+' wide'} ic="🔁" l="Actual vs forecast consumption (T/day)" v=${cd==null?'—':sg(cd)} s=${pl}/>
+ <${K} cls="c-t" ic="🎯" l="Forecast jetty unloading (T)" v=${v('fu')} s=${pl}/>
  <${K} cls="c-g" ic="🚚" l="Actual jetty unloading (T)" v=${v('au')} s=${pl}/>
- <${K} cls=${p?dc(p.ud):'c-t'} ic="⚖️" l="Actual vs forecast unloading (T)" v=${p?sg(p.ud):'—'} s=${pl}/>
+ <${K} cls=${(p?dc(p.ud):'c-t')+' wide'} ic="⚖️" l="Actual vs forecast unloading (T)" v=${p?sg(p.ud):'—'} s=${pl}/>
  <${K} cls="c-p" ic="📋" l="Forecast closing stock (T)" v=${v('fc')} s=${pl}/>
- <${K} cls="c-t" ic="🏁" l="Actual closing stock (T)" v=${v('ac')} s=${pl}/>
- <${K} cls=${p?dc(p.sd):'c-t'} ic="📊" l="Stock deviation: actual vs forecast (T)" v=${p?sg(p.sd):'—'} s=${pl}/></div>
- <h3>${'Jetty unloading (T) · '+fd(x.from)+' to '+fd(x.to)}</h3>
- <table><tr><th>Date</th><th>Forecast</th><th>Actual</th><th>Deviation</th></tr>${T1.map(r=>html`<tr class=${r.d===x.today?'tod':''}><td>${fd(r.d)}</td><td>${f(r.fu)}</td><td>${r.ok?f(r.au):'—'}</td><td class=${r.ok?pn(r.ud):''}>${r.ok?sg(r.ud):'—'}</td></tr>`)}</table>
- <h3>${'Closing stock (T) · '+fd(x.from)+' to '+fd(x.to)}</h3>
- <table><tr><th>Date</th><th>Forecast</th><th>Actual</th><th>Deviation</th></tr>${T1.map(r=>html`<tr class=${r.d===x.today?'tod':''}><td>${fd(r.d)}</td><td>${f(r.fc)}</td><td>${r.ok?f(r.ac):'—'}</td><td class=${r.ok?pn(r.sd):''}>${r.ok?sg(r.sd):'—'}</td></tr>`)}</table>`}
+ <${K} cls="c-a" ic="🏁" l="Actual closing stock (T)" v=${v('ac')} s=${pl}/>
+ <${K} cls=${(p?dc(p.sd):'c-t')+' wide'} ic="📊" l="Stock deviation: actual vs forecast (T)" v=${p?sg(p.sd):'—'} s=${pl}/></div>
+ ${TB('Coal consumption (T/day)','fk','ak',r=>r.ak-r.fk,n=>n>0?'amb':n<0?'pos':'')}
+ ${TB('Jetty unloading (T)','fu','au',r=>r.ud,pn)}
+ ${TB('Closing stock (T)','fc','ac',r=>r.sd,pn)}`}
 class EB extends React.Component{constructor(p){super(p);this.state={e:null}}static getDerivedStateFromError(e){return{e}}componentDidUpdate(p){if(p.k!==this.props.k&&this.state.e)this.setState({e:null})}render(){return this.state.e?html`<div class="err">Could not show this screen: ${String(this.state.e)}</div>`:this.props.children}}
 function App(){
  const [t,setT]=useState(localStorage.getItem('rnpl_t')),[d,setD]=useState(()=>{try{return JSON.parse(localStorage.getItem('rnpl_d'))}catch(e){return null}}),[tab,setTab]=useState(0),[err,setErr]=useState(''),[busy,setB]=useState(false);
